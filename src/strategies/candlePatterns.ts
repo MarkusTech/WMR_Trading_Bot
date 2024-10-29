@@ -1,4 +1,3 @@
-// src/strategies/candlePatterns.ts
 import { PriceData } from "../types";
 
 // Define a type for signals
