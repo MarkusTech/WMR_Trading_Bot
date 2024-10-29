@@ -32,9 +32,9 @@ export const atrStrategy = (
     if (atrValue !== undefined) {
       // Check if atrValue is defined
       if (atrValue > threshold) {
-        signals.push({ date: prices[i + 1].date, signal: "high volatility" }); // Date for the next price
+        signals.push({ date: prices[i + 1].date, signal: "high volatility" });
       } else {
-        signals.push({ date: prices[i + 1].date, signal: "low volatility" }); // Date for the next price
+        signals.push({ date: prices[i + 1].date, signal: "low volatility" });
       }
     }
   }
@@ -47,11 +47,11 @@ const calculateATR = (
   trValues: number[],
   period: number
 ): (number | undefined)[] => {
-  const atr: (number | undefined)[] = []; // Allow undefined values
+  const atr: (number | undefined)[] = [];
 
   for (let i = 0; i < trValues.length; i++) {
     if (i < period - 1) {
-      atr.push(undefined); // Use undefined instead of null
+      atr.push(undefined);
     } else if (i === period - 1) {
       // Calculate the initial ATR
       const initialAtr =
@@ -63,11 +63,10 @@ const calculateATR = (
       const currentTr = trValues[i];
 
       if (previousAtr !== undefined) {
-        // Ensure previousAtr is defined
-        const newAtr = (previousAtr * (period - 1) + currentTr) / period; // Use non-null assertion
+        const newAtr = (previousAtr * (period - 1) + currentTr) / period;
         atr.push(newAtr);
       } else {
-        atr.push(undefined); // If previousAtr is not defined, push undefined
+        atr.push(undefined);
       }
     }
   }
