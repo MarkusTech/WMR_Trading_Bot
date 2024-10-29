@@ -1,5 +1,3 @@
-// src/strategies/supportResistance.ts
-
 import { PriceData } from "../types";
 
 export const supportResistanceStrategy = (
