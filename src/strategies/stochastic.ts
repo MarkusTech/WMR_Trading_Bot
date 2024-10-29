@@ -11,8 +11,8 @@ export const stochasticStrategy = (prices: PriceData[], period: number) => {
 
     const kValue =
       ((prices[i].close - lowestLow) / (highestHigh - lowestLow)) * 100;
-    const dValue = (kValue + (previousDValue || 0)) / 2; // Simple moving average of K
-    previousDValue = dValue; // Store current dValue for the next iteration
+    const dValue = (kValue + (previousDValue || 0)) / 2;
+    previousDValue = dValue;
 
     if (kValue > 80 && dValue > 80) {
       signals.push({ date: prices[i].date, signal: "sell", dValue });
