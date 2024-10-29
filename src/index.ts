@@ -6,10 +6,10 @@ import { macdStrategy } from "./strategies/macd";
 import { stochasticStrategy } from "./strategies/stochastic";
 import { volumeAnalysis } from "./strategies/volume";
 import { supportResistanceStrategy } from "./strategies/supportResistance";
-import { candlePatternStrategy } from "./strategies/candlePatterns";
+import { candlePatternStrategy } from "./strategies/candlePatterts";
 import { trendLineStrategy } from "./strategies/trendLines";
-import { atrStrategy } from "./strategies/atr"; // Make sure to import the ATR strategy
-import { PriceData } from "./types"; // Ensure you have the PriceData type defined
+import { atrStrategy } from "./strategies/atr
+import { PriceData } from "./types";
 
 const TRADE_SYMBOL = "EURUSD"; // Trading symbol
 
