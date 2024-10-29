@@ -1,5 +1,3 @@
-// src/strategies/trendLines.ts
-
 import { PriceData } from "../types";
 
 export const trendLineStrategy = (prices: PriceData[]) => {
