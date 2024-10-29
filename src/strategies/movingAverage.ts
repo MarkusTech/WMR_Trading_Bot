@@ -1,25 +1,33 @@
+// src/strategies/movingAverage.ts
+
+import { PriceData } from "../types"; // Assuming you have a types file for shared types
+
 export const movingAverageCrossover = (
-  prices: number[],
+  prices: PriceData[],
   shortPeriod: number,
   longPeriod: number
 ) => {
   const shortMA = calculateMovingAverage(prices, shortPeriod);
   const longMA = calculateMovingAverage(prices, longPeriod);
-  let buySignal = false;
-  let sellSignal = false;
+  const signals = [];
 
-  if (shortMA > longMA) {
-    buySignal = true;
-  } else if (shortMA < longMA) {
-    sellSignal = true;
+  for (let i = 1; i < prices.length; i++) {
+    if (shortMA[i - 1] < longMA[i - 1] && shortMA[i] > longMA[i]) {
+      signals.push({ date: prices[i].date, signal: "buy" });
+    } else if (shortMA[i - 1] > longMA[i - 1] && shortMA[i] < longMA[i]) {
+      signals.push({ date: prices[i].date, signal: "sell" });
+    }
   }
 
-  return { buySignal, sellSignal };
+  return signals;
 };
 
-const calculateMovingAverage = (data: number[], period: number) => {
-  if (data.length < period) return 0;
-  const slice = data.slice(-period);
-  const sum = slice.reduce((a, b) => a + b, 0);
-  return sum / period;
+const calculateMovingAverage = (prices: PriceData[], period: number) => {
+  const movingAverages: number[] = [];
+  for (let i = 0; i <= prices.length - period; i++) {
+    const slice = prices.slice(i, i + period);
+    const average = slice.reduce((acc, price) => acc + price.close, 0) / period;
+    movingAverages.push(average);
+  }
+  return movingAverages;
 };
