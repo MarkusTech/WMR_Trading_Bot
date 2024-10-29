@@ -1,5 +1,3 @@
-// src/strategies/rsi.ts
-
 import { PriceData } from "../types";
 
 export const rsiStrategy = (prices: PriceData[], period: number) => {
