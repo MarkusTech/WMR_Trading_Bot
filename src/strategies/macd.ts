@@ -18,9 +18,9 @@ export const macdStrategy = (
   const signals = [];
   for (let i = 1; i < macd.length; i++) {
     if (macd[i - 1] < signalLine[i - 1] && macd[i] > signalLine[i]) {
-      signals.push({ date: prices[i + longPeriod - 1].date, signal: "buy" }); // Adjusted to access the correct date
+      signals.push({ date: prices[i + longPeriod - 1].date, signal: "buy" });
     } else if (macd[i - 1] > signalLine[i - 1] && macd[i] < signalLine[i]) {
-      signals.push({ date: prices[i + longPeriod - 1].date, signal: "sell" }); // Adjusted to access the correct date
+      signals.push({ date: prices[i + longPeriod - 1].date, signal: "sell" });
     }
   }
 
