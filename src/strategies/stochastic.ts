@@ -1,9 +1,8 @@
-// src/strategies/stochastic.ts
-
-import { PriceData } from "../types";
+import { PriceData, SignalData } from "../types";
 
 export const stochasticStrategy = (prices: PriceData[], period: number) => {
-  const signals = [];
+  const signals: SignalData[] = [];
+  let previousDValue: number | undefined;
 
   for (let i = period; i < prices.length; i++) {
     const slice = prices.slice(i - period, i + 1);
@@ -12,12 +11,13 @@ export const stochasticStrategy = (prices: PriceData[], period: number) => {
 
     const kValue =
       ((prices[i].close - lowestLow) / (highestHigh - lowestLow)) * 100;
-    const dValue = (kValue + (signals[i - 1]?.dValue || 0)) / 2; // Simple moving average of K
+    const dValue = (kValue + (previousDValue || 0)) / 2; // Simple moving average of K
+    previousDValue = dValue; // Store current dValue for the next iteration
 
     if (kValue > 80 && dValue > 80) {
-      signals.push({ date: prices[i].date, signal: "sell" });
+      signals.push({ date: prices[i].date, signal: "sell", dValue });
     } else if (kValue < 20 && dValue < 20) {
-      signals.push({ date: prices[i].date, signal: "buy" });
+      signals.push({ date: prices[i].date, signal: "buy", dValue });
     }
   }
 
