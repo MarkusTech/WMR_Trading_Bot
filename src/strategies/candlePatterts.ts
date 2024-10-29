@@ -1,5 +1,3 @@
-// src/strategies/candlePatterns.ts
-
 import { PriceData } from "../types";
 
 export const candlePatternStrategy = (prices: PriceData[]) => {
