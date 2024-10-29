@@ -1,52 +1,67 @@
-type PriceData = {
-  close: number; // Closing price
-  date: Date; // Date of the price
-};
+import { PriceData, BollingerBandSignal } from "../types";
 
-// Function to calculate Bollinger Bands
-export const calculateBollingerBands = (
-  prices: PriceData[],
-  period: number,
-  stdDevMultiplier: number
-) => {
-  if (prices.length < period) {
-    throw new Error("Not enough data to calculate Bollinger Bands");
-  }
-
-  // Calculate the SMA
-  const sma: number[] = [];
-  const upperBand: number[] = [];
-  const lowerBand: number[] = [];
+// Function to calculate the moving average
+const calculateMovingAverage = (prices: number[], period: number): number[] => {
+  const movingAverages: number[] = [];
 
   for (let i = 0; i <= prices.length - period; i++) {
     const slice = prices.slice(i, i + period);
-    const sum = slice.reduce((acc, price) => acc + price.close, 0);
-    const average = sum / period;
-    sma.push(average);
-
-    // Calculate standard deviation
-    const variance =
-      slice.reduce(
-        (acc, price) => acc + Math.pow(price.close - average, 2),
-        0
-      ) / period;
-    const stdDev = Math.sqrt(variance);
-
-    // Calculate upper and lower bands
-    upperBand.push(average + stdDevMultiplier * stdDev);
-    lowerBand.push(average - stdDevMultiplier * stdDev);
+    const average = slice.reduce((sum, price) => sum + price, 0) / period;
+    movingAverages.push(average);
   }
 
-  // Create an array of objects containing the results
-  const results = [];
-  for (let i = 0; i < upperBand.length; i++) {
-    results.push({
-      date: prices[i + period - 1].date, // Using the date from the original price data
-      sma: sma[i],
-      upperBand: upperBand[i],
-      lowerBand: lowerBand[i],
+  return movingAverages;
+};
+
+// Function to calculate the standard deviation
+const calculateStandardDeviation = (
+  prices: number[],
+  period: number,
+  movingAverage: number
+): number => {
+  const slice = prices.slice(prices.length - period);
+  const variance =
+    slice.reduce((sum, price) => sum + Math.pow(price - movingAverage, 2), 0) /
+    period;
+  return Math.sqrt(variance);
+};
+
+// Bollinger Bands Strategy
+export const bollingerBands = (
+  prices: PriceData[],
+  period: number,
+  numOfStdDev: number
+): BollingerBandSignal[] => {
+  const signals: BollingerBandSignal[] = [];
+  const closingPrices = prices.map((price) => price.close); // Extract closing prices
+  const movingAverages = calculateMovingAverage(closingPrices, period);
+
+  for (let i = period - 1; i < closingPrices.length; i++) {
+    const movingAverage = movingAverages[i - (period - 1)];
+    const stdDev = calculateStandardDeviation(
+      closingPrices.slice(0, i + 1),
+      period,
+      movingAverage
+    );
+
+    const upperBand = movingAverage + numOfStdDev * stdDev;
+    const lowerBand = movingAverage - numOfStdDev * stdDev;
+
+    let signal: "buy" | "sell" | "hold" = "hold";
+
+    if (closingPrices[i] < lowerBand) {
+      signal = "buy"; // Buy signal when price is below lower band
+    } else if (closingPrices[i] > upperBand) {
+      signal = "sell"; // Sell signal when price is above upper band
+    }
+
+    signals.push({
+      date: prices[i].date,
+      signal: signal,
+      upperBand: upperBand,
+      lowerBand: lowerBand,
     });
   }
 
-  return results;
+  return signals;
 };
