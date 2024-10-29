@@ -1,6 +1,4 @@
-// src/strategies/movingAverage.ts
-
-import { PriceData } from "../types"; // Assuming you have a types file for shared types
+import { PriceData } from "../types";
 
 export const movingAverageCrossover = (
   prices: PriceData[],
