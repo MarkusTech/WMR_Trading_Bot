@@ -5,32 +5,35 @@ import { bollingerBands } from "./strategies/bollingerBands";
 import { macdStrategy } from "./strategies/macd";
 import { stochasticStrategy } from "./strategies/stochastic";
 import { volumeAnalysis } from "./strategies/volume";
-import { supportResistanceStrategy } from "./strategies/supportResistance";
-import { candlePatternStrategy } from "./strategies/candlePatterts";
+// import { supportResistanceStrategy } from "./strategies/supportResistance";
+import { candlePatternStrategy } from "./strategies/candlePatterns";
 import { trendLineStrategy } from "./strategies/trendLines";
-import { atrStrategy } from "./strategies/atr
+import { atrStrategy } from "./strategies/atr";
 import { PriceData } from "./types";
 
 const TRADE_SYMBOL = "EURUSD"; // Trading symbol
 
 const runBot = async () => {
   try {
-    const marketData: PriceData[] = await getMarketData(TRADE_SYMBOL); // Fetch market data
-    // Extract close prices from market data
+    // Fetch market data as an array of PriceData
+    const marketData: PriceData[] = await getMarketData(TRADE_SYMBOL);
+
+    // Extract close prices for strategies that require them
     const prices = marketData.map((data) => data.close);
 
     // Call various strategies
-    const maSignal = movingAverageCrossover(prices, 9, 21);
+    const maSignal = movingAverageCrossover(marketData, 9, 21);
     const rsiSignal = rsiStrategy(marketData, 14);
-    const bbSignal = bollingerBands(prices, 20, 2);
+    const bbSignal = bollingerBands(marketData, 20, 2);
     const macdSignal = macdStrategy(marketData, 12, 26, 9);
     const stochasticSignal = stochasticStrategy(marketData, 14);
-    const volumeSignal = volumeAnalysis(marketData, 1000); // Example volume threshold
-    const srSignal = supportResistanceStrategy(marketData, 1.1, 1.2); // Example levels for EUR/USD
+    const volumeSignal = volumeAnalysis(marketData, 1000);
+    // const srSignal = supportResistanceStrategy(marketData, 1.1, 1.2);
     const candleSignal = candlePatternStrategy(marketData);
-    const trendSignal = trendLineStrategy(marketData, 1.15); // Example trend line
-    const atrSignal = atrStrategy(marketData, 14, 0.01); // Example ATR threshold
+    const trendSignal = trendLineStrategy(marketData);
+    const atrSignal = atrStrategy(marketData, 14, 0.01);
 
+    // Log all signals for debugging
     console.log({
       maSignal,
       rsiSignal,
@@ -38,7 +41,7 @@ const runBot = async () => {
       macdSignal,
       stochasticSignal,
       volumeSignal,
-      srSignal,
+      // srSignal,
       candleSignal,
       trendSignal,
       atrSignal,
