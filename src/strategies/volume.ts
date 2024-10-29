@@ -1,5 +1,3 @@
-// src/strategies/volume.ts
-
 import { PriceData } from "../types";
 
 export const volumeAnalysis = (prices: PriceData[], threshold: number) => {
