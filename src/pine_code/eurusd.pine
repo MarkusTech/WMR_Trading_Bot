@@ -1,0 +1,160 @@
+//@version=5
+strategy(title="Optimized EUR/USD Gaussian Channel + Candlestick Patterns", overlay=true, calc_on_every_tick=false, initial_capital=1000, default_qty_type=strategy.percent_of_equity, default_qty_value=10, commission_type=strategy.commission.percent, commission_value=0.1, slippage=0, fill_orders_on_standard_ohlc=true)
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Gaussian Filter Functions (Must be declared first)
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+f_filt9x(_a, _s, _i) =>
+    var int _m2 = 0, var int _m3 = 0, var int _m4 = 0, var int _m5 = 0, var int _m6 = 0, 
+    var int _m7 = 0, var int _m8 = 0, var int _m9 = 0, var float _f = .0
+    _x = 1 - _a
+    _m2 := _i == 9 ? 36  : _i == 8 ? 28 : _i == 7 ? 21 : _i == 6 ? 15 : _i == 5 ? 10 : _i == 4 ? 6 : _i == 3 ? 3 : _i == 2 ? 1 : 0
+    _m3 := _i == 9 ? 84  : _i == 8 ? 56 : _i == 7 ? 35 : _i == 6 ? 20 : _i == 5 ? 10 : _i == 4 ? 4 : _i == 3 ? 1 : 0
+    _m4 := _i == 9 ? 126 : _i == 8 ? 70 : _i == 7 ? 35 : _i == 6 ? 15 : _i == 5 ? 5  : _i == 4 ? 1 : 0
+    _m5 := _i == 9 ? 126 : _i == 8 ? 56 : _i == 7 ? 21 : _i == 6 ? 6  : _i == 5 ? 1  : 0 
+    _m6 := _i == 9 ? 84  : _i == 8 ? 28 : _i == 7 ? 7  : _i == 6 ? 1  : 0 
+    _m7 := _i == 9 ? 36  : _i == 8 ? 8  : _i == 7 ? 1  : 0 
+    _m8 := _i == 9 ? 9   : _i == 8 ? 1  : 0 
+    _m9 := _i == 9 ? 1   : 0
+    _f := math.pow(_a, _i) * nz(_s) + _i * _x * nz(_f[1]) - (_i >= 2 ? _m2 * math.pow(_x, 2) * nz(_f[2]) : 0) + (_i >= 3 ? _m3 * math.pow(_x, 3) * nz(_f[3]) : 0) - (_i >= 4 ? _m4 * math.pow(_x, 4) * nz(_f[4]) : 0) + (_i >= 5 ? _m5 * math.pow(_x, 5) * nz(_f[5]) : 0) - (_i >= 6 ? _m6 * math.pow(_x, 6) * nz(_f[6]) : 0) + (_i >= 7 ? _m7 * math.pow(_x, 7) * nz(_f[7]) : 0) - (_i >= 8 ? _m8 * math.pow(_x, 8) * nz(_f[8]) : 0) + (_i == 9 ? _m9 * math.pow(_x, 9) * nz(_f[9]) : 0)
+
+f_pole(_a, _s, _i) =>
+    _f1 = f_filt9x(_a, _s, 1)
+    _f2 = _i >= 2 ? f_filt9x(_a, _s, 2) : 0.0
+    _f3 = _i >= 3 ? f_filt9x(_a, _s, 3) : 0.0
+    _f4 = _i >= 4 ? f_filt9x(_a, _s, 4) : 0.0
+    _f5 = _i >= 5 ? f_filt9x(_a, _s, 5) : 0.0
+    _f6 = _i >= 6 ? f_filt9x(_a, _s, 6) : 0.0
+    _f7 = _i >= 7 ? f_filt9x(_a, _s, 7) : 0.0
+    _f8 = _i >= 8 ? f_filt9x(_a, _s, 8) : 0.0
+    _f9 = _i == 9 ? f_filt9x(_a, _s, 9) : 0.0
+    _fn = _i == 1 ? _f1 : _i == 2 ? _f2 : _i == 3 ? _f3 : _i == 4 ? _f4 : _i == 5 ? _f5 : _i == 6 ? _f6 : _i == 7 ? _f7 : _i == 8 ? _f8 : _i == 9 ? _f9 : na
+    [_fn, _f1]
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Inputs
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Date Range
+startDate = input.time(timestamp("1 January 2018 00:00 +0000"), "Start Date", group="Main Settings")
+endDate = input.time(timestamp("31 Dec 2069 23:59 +0000"), "End Date", group="Main Settings")
+timeCondition = time >= startDate and time <= endDate
+
+// Gaussian Channel
+int poles = input.int(4, "Poles", 1, 9, group="Gaussian Channel")
+int period = input.int(72, "Sampling Period", 2, group="Gaussian Channel")  // Optimized for 15-minute chart
+float mult = input.float(1.0, "True Range Multiplier", group="Gaussian Channel")  // Reduced multiplier for EUR/USD
+bool reducedLag = input.bool(false, "Reduced Lag Mode", group="Gaussian Channel")
+bool fastResponse = input.bool(false, "Fast Response Mode", group="Gaussian Channel")
+
+// Stochastic RSI
+smoothK = input.int(3, "K", 1, group="Stochastic RSI")
+smoothD = input.int(3, "D", 1, group="Stochastic RSI")
+lengthRSI = input.int(14, "RSI Length", 1, group="Stochastic RSI")
+lengthStoch = input.int(14, "Stochastic Length", 1, group="Stochastic RSI")
+
+// Risk Management
+atrLength = input.int(14, "ATR Length", group="Risk Management")
+slMultiplier = input.float(1.5, "Stop-Loss Multiplier", group="Risk Management")
+tpMultiplier = input.float(2.0, "Take-Profit Multiplier", group="Risk Management")
+
+// Support and Resistance
+int srLookback = input.int(20, "Support/Resistance Lookback", group="Support/Resistance")
+float srThreshold = input.float(0.5, "Support/Resistance Threshold", group="Support/Resistance")
+
+// Candlestick Patterns
+bool enableCandlePatterns = input.bool(true, "Enable Candlestick Patterns", group="Candlestick Patterns")
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Calculations
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Gaussian Channel
+beta = (1 - math.cos(4*math.asin(1)/period)) / (math.pow(1.414, 2/poles) - 1)
+alpha = -beta + math.sqrt(math.pow(beta, 2) + 2*beta)
+lag = (period - 1)/(2*poles)
+
+src = hlc3
+srcData = reducedLag ? src + (src - src[lag]) : src
+trData = reducedLag ? ta.tr + (ta.tr - ta.tr[lag]) : ta.tr
+
+[filterMain, filter1] = f_pole(alpha, srcData, poles)
+[filterTRMain, filterTR1] = f_pole(alpha, trData, poles)
+
+finalFilter = fastResponse ? (filterMain + filter1)/2 : filterMain
+finalTR = fastResponse ? (filterTRMain + filterTR1)/2 : filterTRMain
+
+hband = finalFilter + finalTR * mult
+lband = finalFilter - finalTR * mult
+
+// Stochastic RSI
+rsi = ta.rsi(close, lengthRSI)
+k = ta.sma(ta.stoch(rsi, rsi, rsi, lengthStoch), smoothK)
+d = ta.sma(k, smoothD)
+
+// ATR for Risk Management
+atr = ta.atr(atrLength)
+
+// Support and Resistance
+support = ta.lowest(low, srLookback)
+resistance = ta.highest(high, srLookback)
+
+// Candlestick Patterns
+bodySize = math.abs(close - open)
+upperWick = high - math.max(close, open)
+lowerWick = math.min(close, open) - low
+
+// Bullish Patterns
+engulfingBullish = close > open and close[1] < open[1] and close > open[1] and close[1] < open  // Bullish Engulfing
+hammer = lowerWick > 2 * bodySize and upperWick < bodySize and close > open  // Hammer
+doji = bodySize <= (high - low) * 0.1  // Doji
+
+// Bearish Patterns
+engulfingBearish = close < open and close[1] > open[1] and close < open[1] and close[1] > open  // Bearish Engulfing
+shootingStar = upperWick > 2 * bodySize and lowerWick < bodySize and close < open  // Shooting Star
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Trading Logic
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Gaussian Channel Signals
+gaussianGreen = finalFilter > finalFilter[1]
+gaussianRed = finalFilter < finalFilter[1]
+
+priceAbove = close > hband
+priceBelow = close < lband
+
+stochOverbought = k > 80
+stochOversold = k < 20
+
+// Support and Resistance Bounceback
+bounceFromSupport = ta.crossover(close, support) and close > support * (1 - srThreshold)
+bounceFromResistance = ta.crossunder(close, resistance) and close < resistance * (1 + srThreshold)
+
+// Entry Conditions
+longCondition = (gaussianGreen and priceAbove and stochOversold) or (bounceFromSupport and enableCandlePatterns and (engulfingBullish or hammer or doji))
+shortCondition = (gaussianRed and priceBelow and stochOverbought) or (bounceFromResistance and enableCandlePatterns and (engulfingBearish or shootingStar))
+
+// Risk Management
+stopLossLong = close - atr * slMultiplier
+takeProfitLong = close + atr * tpMultiplier
+stopLossShort = close + atr * slMultiplier
+takeProfitShort = close - atr * tpMultiplier
+
+// Execute Trades
+if (longCondition and timeCondition)
+    strategy.entry("Long", strategy.long)
+    strategy.exit("Take Profit/Stop Loss Long", "Long", limit=takeProfitLong, stop=stopLossLong)
+
+if (shortCondition and timeCondition)
+    strategy.entry("Short", strategy.short)
+    strategy.exit("Take Profit/Stop Loss Short", "Short", limit=takeProfitShort, stop=stopLossShort)
+
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Visuals
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+filterColor = finalFilter > finalFilter[1] ? #0aff68 : #ff0a5a
+plot(finalFilter, "Filter", filterColor, 2)
+plot(hband, "High Band", filterColor)
+plot(lband, "Low Band", filterColor)
+fill(plot(hband), plot(lband), color.new(filterColor, 90), "Channel Fill")
+
+plot(support, "Support", color=color.green, linewidth=2)
+plot(resistance, "Resistance", color=color.red, linewidth=2)
